@@ -1,11 +1,11 @@
 ﻿using System;
-using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
 using System.Drawing;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
+using TMC人事管理;
 
 namespace WindowsFormsApplication1
 {
@@ -60,7 +60,7 @@ namespace WindowsFormsApplication1
         #endregion
 
         #region SQL
-        const String CONNECTION_STRING = "TMC人事管理.Properties.Settings.JINJIConnectionString";
+        //const String CONNECTION_STRING = "TMC人事管理.Properties.Settings.JINJIConnectionString";
         const String GET_PROGRAM_DATA = @"SELECT SERIAL_NUMBER, WORKING_FLAG, WORKING_HOST_NAME, WORKING_IP_ADDRESS, START_DATE_TIME, END_DATE_TIME FROM PROGRAM_WORKING_INFO ORDER BY SERIAL_NUMBER ASC";
         const String GET_SYSTEM_DATA = @"SELECT SYSTEM_CODE, SYSTEM_NAME FROM SYSTEM_INFORMATION WHERE DELETE_FLAG = '0' ORDER BY SYSTEM_CODE ASC";
         const String GET_RETURN_ITEM_DATA = @"SELECT RETURN_ITEM_CODE, RETURN_ITEM_NAME FROM RETURN_ITEM WHERE DELETE_FLAG = '0' ORDER BY RETURN_ITEM_CODE ASC";
@@ -988,7 +988,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = ConfigurationManager.ConnectionStrings[CONNECTION_STRING].ConnectionString;
+            var connectionString = Constants.CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1030,7 +1030,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = ConfigurationManager.ConnectionStrings[CONNECTION_STRING].ConnectionString;
+            var connectionString = Constants.CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1072,7 +1072,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = ConfigurationManager.ConnectionStrings[CONNECTION_STRING].ConnectionString;
+            var connectionString = Constants.CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1114,7 +1114,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = ConfigurationManager.ConnectionStrings[CONNECTION_STRING].ConnectionString;
+            var connectionString = Constants.CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1157,7 +1157,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = ConfigurationManager.ConnectionStrings[CONNECTION_STRING].ConnectionString;
+            var connectionString = Constants.CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1198,7 +1198,7 @@ namespace WindowsFormsApplication1
         public void Insert_Reply_Permission()
         {
             // 接続文字列の取得
-            var connectionString = ConfigurationManager.ConnectionStrings[CONNECTION_STRING].ConnectionString;
+            var connectionString = Constants.CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1237,7 +1237,7 @@ namespace WindowsFormsApplication1
         public void Delete_Reply_Permission()
         {
             // 接続文字列の取得
-            var connectionString = ConfigurationManager.ConnectionStrings[CONNECTION_STRING].ConnectionString;
+            var connectionString = Constants.CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1276,7 +1276,7 @@ namespace WindowsFormsApplication1
         public void Insert_Program_Working_Info()
         {
             // 接続文字列の取得
-            var connectionString = ConfigurationManager.ConnectionStrings[CONNECTION_STRING].ConnectionString;
+            var connectionString = Constants.CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1344,7 +1344,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = ConfigurationManager.ConnectionStrings[CONNECTION_STRING].ConnectionString;
+            var connectionString = Constants.CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1385,7 +1385,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = ConfigurationManager.ConnectionStrings[CONNECTION_STRING].ConnectionString;
+            var connectionString = Constants.CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1425,7 +1425,7 @@ namespace WindowsFormsApplication1
         public void Insert_System_Info()
         {
             // 接続文字列の取得
-            var connectionString = ConfigurationManager.ConnectionStrings[CONNECTION_STRING].ConnectionString;
+            var connectionString = Constants.CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1466,7 +1466,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = ConfigurationManager.ConnectionStrings[CONNECTION_STRING].ConnectionString;
+            var connectionString = Constants.CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1508,7 +1508,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = ConfigurationManager.ConnectionStrings[CONNECTION_STRING].ConnectionString;
+            var connectionString = Constants.CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1548,7 +1548,7 @@ namespace WindowsFormsApplication1
         public void Insert_Return_Item()
         {
             // 接続文字列の取得
-            var connectionString = ConfigurationManager.ConnectionStrings[CONNECTION_STRING].ConnectionString;
+            var connectionString = Constants.CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1589,7 +1589,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = ConfigurationManager.ConnectionStrings[CONNECTION_STRING].ConnectionString;
+            var connectionString = Constants.CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1631,7 +1631,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = ConfigurationManager.ConnectionStrings[CONNECTION_STRING].ConnectionString;
+            var connectionString = Constants.CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1682,7 +1682,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = ConfigurationManager.ConnectionStrings[CONNECTION_STRING].ConnectionString;
+            var connectionString = Constants.CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1723,7 +1723,7 @@ namespace WindowsFormsApplication1
         public void Create_Work_Reply_Permission()
         {
             // 接続文字列の取得
-            var connectionString = ConfigurationManager.ConnectionStrings[CONNECTION_STRING].ConnectionString;
+            var connectionString = Constants.CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1762,7 +1762,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = ConfigurationManager.ConnectionStrings[CONNECTION_STRING].ConnectionString;
+            var connectionString = Constants.CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1804,7 +1804,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = ConfigurationManager.ConnectionStrings[CONNECTION_STRING].ConnectionString;
+            var connectionString = Constants.CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1844,7 +1844,7 @@ namespace WindowsFormsApplication1
         public void Drop_Work_Reply_Permission()
         {
             // 接続文字列の取得
-            var connectionString = ConfigurationManager.ConnectionStrings[CONNECTION_STRING].ConnectionString;
+            var connectionString = Constants.CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1881,7 +1881,7 @@ namespace WindowsFormsApplication1
         public void Create_Work_System_Info()
         {
             // 接続文字列の取得
-            var connectionString = ConfigurationManager.ConnectionStrings[CONNECTION_STRING].ConnectionString;
+            var connectionString = Constants.CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1920,7 +1920,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = ConfigurationManager.ConnectionStrings[CONNECTION_STRING].ConnectionString;
+            var connectionString = Constants.CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1962,7 +1962,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = ConfigurationManager.ConnectionStrings[CONNECTION_STRING].ConnectionString;
+            var connectionString = Constants.CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -2002,7 +2002,7 @@ namespace WindowsFormsApplication1
         public void Drop_Work_System_Info()
         {
             // 接続文字列の取得
-            var connectionString = ConfigurationManager.ConnectionStrings[CONNECTION_STRING].ConnectionString;
+            var connectionString = Constants.CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -2039,7 +2039,7 @@ namespace WindowsFormsApplication1
         public void Create_Work_Return_Item()
         {
             // 接続文字列の取得
-            var connectionString = ConfigurationManager.ConnectionStrings[CONNECTION_STRING].ConnectionString;
+            var connectionString = Constants.CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -2078,7 +2078,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = ConfigurationManager.ConnectionStrings[CONNECTION_STRING].ConnectionString;
+            var connectionString = Constants.CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -2120,7 +2120,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = ConfigurationManager.ConnectionStrings[CONNECTION_STRING].ConnectionString;
+            var connectionString = Constants.CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -2160,7 +2160,7 @@ namespace WindowsFormsApplication1
         public void Drop_Work_Return_Item()
         {
             // 接続文字列の取得
-            var connectionString = ConfigurationManager.ConnectionStrings[CONNECTION_STRING].ConnectionString;
+            var connectionString = Constants.CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -2199,7 +2199,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = ConfigurationManager.ConnectionStrings[CONNECTION_STRING].ConnectionString;
+            var connectionString = Constants.CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -2241,7 +2241,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = ConfigurationManager.ConnectionStrings[CONNECTION_STRING].ConnectionString;
+            var connectionString = Constants.CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -2283,7 +2283,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = ConfigurationManager.ConnectionStrings[CONNECTION_STRING].ConnectionString;
+            var connectionString = Constants.CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -2704,6 +2704,48 @@ namespace WindowsFormsApplication1
         {
             // 1度int型に変換したのを入れなおす
             if (Regex.IsMatch(New_Return_Item_ID.Text, NUMBER)) New_Return_Item_ID.Text = int.Parse(New_Return_Item_ID.Text).ToString();
+        }
+        #endregion
+        #endregion
+
+        #region ListBoxの色
+        #region システム情報の変更項目
+        private void System_Info_Data_DrawItem(object sender, DrawItemEventArgs e)
+        {
+            // 背景を描画
+            e.DrawBackground();
+
+            // ブラシのデフォルトの色を黒色として定義する
+            Brush myBrush = Brushes.Black;
+
+            // 非活性時にgainsboroに変更する
+            if (System_Info_Data.Enabled == false) myBrush = Brushes.Gainsboro;
+
+            // 現在のフォントとカスタムブラシ設定に基づいて現在のアイテムテキストを描画する
+            e.Graphics.DrawString(System_Info_Data.Items[e.Index].ToString(), e.Font, myBrush, e.Bounds, StringFormat.GenericDefault);
+
+            // ListBoxにフォーカスがある場合は、選択した項目の周囲にフォーカスの四角形を描画する
+            e.DrawFocusRectangle();
+        }
+        #endregion
+
+        #region 応答項目情報の変更項目
+        private void Return_Item_Data_DrawItem(object sender, DrawItemEventArgs e)
+        {
+            // 背景を描画
+            e.DrawBackground();
+
+            // ブラシのデフォルトの色を黒色として定義する
+            Brush myBrush = Brushes.Black;
+
+            // 非活性時にgainsboroに変更する
+            if (Return_Item_Data.Enabled == false) myBrush = Brushes.Gainsboro;
+
+            // 現在のフォントとカスタムブラシ設定に基づいて現在のアイテムテキストを描画する
+            e.Graphics.DrawString(Return_Item_Data.Items[e.Index].ToString(), e.Font, myBrush, e.Bounds, StringFormat.GenericDefault);
+
+            // ListBoxにフォーカスがある場合は、選択した項目の周囲にフォーカスの四角形を描画する
+            e.DrawFocusRectangle();
         }
         #endregion
         #endregion

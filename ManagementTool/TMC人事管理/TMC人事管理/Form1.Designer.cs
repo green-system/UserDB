@@ -462,11 +462,13 @@
             // 
             // System_Info_Data
             // 
+            this.System_Info_Data.DrawMode = System.Windows.Forms.DrawMode.OwnerDrawFixed;
             this.System_Info_Data.FormattingEnabled = true;
             this.System_Info_Data.Location = new System.Drawing.Point(20, 63);
             this.System_Info_Data.Name = "System_Info_Data";
             this.System_Info_Data.Size = new System.Drawing.Size(261, 381);
             this.System_Info_Data.TabIndex = 0;
+            this.System_Info_Data.DrawItem += new System.Windows.Forms.DrawItemEventHandler(this.System_Info_Data_DrawItem);
             this.System_Info_Data.SelectedIndexChanged += new System.EventHandler(this.System_Info_Data_SelectedIndexChanged);
             // 
             // label4
@@ -664,11 +666,13 @@
             // 
             // Return_Item_Data
             // 
+            this.Return_Item_Data.DrawMode = System.Windows.Forms.DrawMode.OwnerDrawFixed;
             this.Return_Item_Data.FormattingEnabled = true;
             this.Return_Item_Data.Location = new System.Drawing.Point(20, 63);
             this.Return_Item_Data.Name = "Return_Item_Data";
             this.Return_Item_Data.Size = new System.Drawing.Size(261, 381);
             this.Return_Item_Data.TabIndex = 0;
+            this.Return_Item_Data.DrawItem += new System.Windows.Forms.DrawItemEventHandler(this.Return_Item_Data_DrawItem);
             this.Return_Item_Data.SelectedIndexChanged += new System.EventHandler(this.Return_Item_Data_SelectedIndexChanged);
             // 
             // label19

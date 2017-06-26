@@ -4,6 +4,12 @@ using WindowsFormsApplication1;
 
 namespace TMC人事管理
 {
+    static class Constants
+    {
+        // DB接続文字列
+        public const String CONNECTION_STRING = "Data Source=DNX31150\\SID1;Initial Catalog=JINJI;Persist Security Info=True;User ID=sa;Password=chib@pc2016";
+    }
+
     static class Program
     {
         #region 定数
