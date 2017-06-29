@@ -160,7 +160,7 @@ namespace WindowsFormsApplication1
                     else
                     {
                         // メッセージボックスを表示する
-                        MessageBox.Show(WORKING_MESSAGE + Result.Rows[i][WORKING_IP_ADDRESS].ToString() + Environment.NewLine + Result.Rows[i][WORKING_HOST_NAME].ToString() + "", WORKING_CAPTION, MessageBoxButtons.OK, MessageBoxIcon.Exclamation, MessageBoxDefaultButton.Button1);
+                        MessageBox.Show(WORKING_MESSAGE + Result.Rows[i][WORKING_IP_ADDRESS].ToString() + Environment.NewLine + Result.Rows[i][WORKING_HOST_NAME].ToString(), WORKING_CAPTION, MessageBoxButtons.OK, MessageBoxIcon.Exclamation, MessageBoxDefaultButton.Button1);
 
                         // フォームを閉じる
                         this.Close();
@@ -2715,17 +2715,20 @@ namespace WindowsFormsApplication1
             // 背景を描画
             e.DrawBackground();
 
-            // ブラシのデフォルトの色を黒色として定義する
-            Brush myBrush = Brushes.Black;
+            if (System_Info_Data.Items.Count != 0)
+            {
+                // ブラシのデフォルトの色を黒色として定義する
+                Brush myBrush = Brushes.Black;
 
-            // 非活性時にgainsboroに変更する
-            if (System_Info_Data.Enabled == false) myBrush = Brushes.Gainsboro;
+                // 非活性時にgainsboroに変更する
+                if (System_Info_Data.Enabled == false) myBrush = Brushes.Gainsboro;
 
-            // 現在のフォントとカスタムブラシ設定に基づいて現在のアイテムテキストを描画する
-            e.Graphics.DrawString(System_Info_Data.Items[e.Index].ToString(), e.Font, myBrush, e.Bounds, StringFormat.GenericDefault);
+                // 現在のフォントとカスタムブラシ設定に基づいて現在のアイテムテキストを描画する
+                e.Graphics.DrawString(System_Info_Data.Items[e.Index].ToString(), e.Font, myBrush, e.Bounds, StringFormat.GenericDefault);
 
-            // ListBoxにフォーカスがある場合は、選択した項目の周囲にフォーカスの四角形を描画する
-            e.DrawFocusRectangle();
+                // ListBoxにフォーカスがある場合は、選択した項目の周囲にフォーカスの四角形を描画する
+                e.DrawFocusRectangle();
+            }
         }
         #endregion
 
@@ -2735,17 +2738,20 @@ namespace WindowsFormsApplication1
             // 背景を描画
             e.DrawBackground();
 
-            // ブラシのデフォルトの色を黒色として定義する
-            Brush myBrush = Brushes.Black;
+            if (Return_Item_Data.Items.Count != 0)
+            {
+                // ブラシのデフォルトの色を黒色として定義する
+                Brush myBrush = Brushes.Black;
 
-            // 非活性時にgainsboroに変更する
-            if (Return_Item_Data.Enabled == false) myBrush = Brushes.Gainsboro;
+                // 非活性時にgainsboroに変更する
+                if (Return_Item_Data.Enabled == false) myBrush = Brushes.Gainsboro;
 
-            // 現在のフォントとカスタムブラシ設定に基づいて現在のアイテムテキストを描画する
-            e.Graphics.DrawString(Return_Item_Data.Items[e.Index].ToString(), e.Font, myBrush, e.Bounds, StringFormat.GenericDefault);
+                // 現在のフォントとカスタムブラシ設定に基づいて現在のアイテムテキストを描画する
+                e.Graphics.DrawString(Return_Item_Data.Items[e.Index].ToString(), e.Font, myBrush, e.Bounds, StringFormat.GenericDefault);
 
-            // ListBoxにフォーカスがある場合は、選択した項目の周囲にフォーカスの四角形を描画する
-            e.DrawFocusRectangle();
+                // ListBoxにフォーカスがある場合は、選択した項目の周囲にフォーカスの四角形を描画する
+                e.DrawFocusRectangle();
+            }
         }
         #endregion
         #endregion
