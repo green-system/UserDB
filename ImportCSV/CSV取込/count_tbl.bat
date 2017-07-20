@@ -10,9 +10,9 @@
 pushd %0\..
 
 ::èâä˙ê›íË
-set SERVERNAME=DNX31150\sid1
+set SERVERNAME=APLQDMA2065XB06
 set USERID=sa
-set PASSWORD=chib@pc2016
+set PASSWORD=***
 
 SQLCMD -S %SERVERNAME% -U %USERID% -P %PASSWORD% -d JINJI -h -1 -Q "EXIT(set nocount on;select count(*) from %1)"
 exit %errorlevel%

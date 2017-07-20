@@ -2,7 +2,8 @@
  ユーザDB（東京地区システム用）ワークテーブル作成T-SQL
  作成者:K.Tanaka
  変更日付   Rev   変更履歴内容----------------------------->
- 2017/06/30(1.0.0)新規作成
+ 2017/06/30(0.1.0)新規作成
+ 2017/07/11(0.2.0)主キー変更
 */
 
 USE [JINJI]
@@ -300,7 +301,6 @@ GO
 if object_id('[dbo].[WK_PERSON_OF_OTHER_COMPANY]') is not null
 DROP TABLE [dbo].[WK_PERSON_OF_OTHER_COMPANY]
 GO
-
 /*** WK_PERSON_OF_OTHER_COMPANY テーブル作成 ***/
 create table [dbo].[WK_PERSON_OF_OTHER_COMPANY] (
       [STAFF_CODE] [varchar](7)
@@ -318,8 +318,17 @@ create table [dbo].[WK_PERSON_OF_OTHER_COMPANY] (
     , [BELONGING_COMPANY_CODE] [varchar](5)
     , [BELONGING_COMPANY_NAME] [varchar](60)
     , [CARD_STATUS] [varchar](1)
+    , CONSTRAINT [PK__WK_PERSON_OF_OTHER_COMPANY] primary key CLUSTERED
+    (
+       [STAFF_CODE] asc
+    ) WITH (
+       PAD_INDEX = OFF
+     , STATISTICS_NORECOMPUTE = OFF
+     , IGNORE_DUP_KEY = OFF
+     , ALLOW_ROW_LOCKS = ON
+     , ALLOW_PAGE_LOCKS = ON
+    ) ON [PRIMARY]
 ) ON [PRIMARY]
-
 GO
 
 SET ANSI_PADDING OFF
@@ -443,7 +452,6 @@ GO
 if object_id('[dbo].[WK_BU_INFORMATION]') is not null
 DROP TABLE [dbo].[WK_BU_INFORMATION]
 GO
-
 /*** WK_BU_INFORMATION テーブル作成 ***/
 create table [dbo].[WK_BU_INFORMATION] (
       [BU_CODE] [varchar](2)
@@ -472,8 +480,17 @@ create table [dbo].[WK_BU_INFORMATION] (
     , [PERSONNEL_EXCEPTION] [varchar](2)
     , [PERSONNEL_COMPULSION] [varchar](2)
     , [ENGLISH_NAME] [varchar](200)
+    , CONSTRAINT [PK__WK_BU_INFORMATION] primary key CLUSTERED
+    (
+       [BU_CODE] asc
+    ) WITH (
+       PAD_INDEX = OFF
+     , STATISTICS_NORECOMPUTE = OFF
+     , IGNORE_DUP_KEY = OFF
+     , ALLOW_ROW_LOCKS = ON
+     , ALLOW_PAGE_LOCKS = ON
+    ) ON [PRIMARY]
 ) ON [PRIMARY]
-
 GO
 
 SET ANSI_PADDING OFF
@@ -674,7 +691,6 @@ GO
 if object_id('[dbo].[WK_SHITSU_INFORMATION]') is not null
 DROP TABLE [dbo].[WK_SHITSU_INFORMATION]
 GO
-
 /*** WK_SHITSU_INFORMATION テーブル作成 ***/
 create table [dbo].[WK_SHITSU_INFORMATION] (
       [SHITSU_CODE] [varchar](3)
@@ -692,8 +708,17 @@ create table [dbo].[WK_SHITSU_INFORMATION] (
     , [SHITSU_KA_DIVISION_CODE] [varchar](1)
     , [NEW_BELONGING_LIMIT_FLAG] [varchar](1)
     , [ENGLISH_NAME] [varchar](200)
+    , CONSTRAINT [PK__WK_SHITSU_INFORMATION] primary key CLUSTERED
+    (
+       [SHITSU_CODE] asc
+    ) WITH (
+       PAD_INDEX = OFF
+     , STATISTICS_NORECOMPUTE = OFF
+     , IGNORE_DUP_KEY = OFF
+     , ALLOW_ROW_LOCKS = ON
+     , ALLOW_PAGE_LOCKS = ON
+    ) ON [PRIMARY]
 ) ON [PRIMARY]
-
 GO
 
 SET ANSI_PADDING OFF
@@ -817,7 +842,6 @@ GO
 if object_id('[dbo].[WK_KAKARI_INFORMATION]') is not null
 DROP TABLE [dbo].[WK_KAKARI_INFORMATION]
 GO
-
 /*** WK_KAKARI_INFORMATION テーブル作成 ***/
 create table [dbo].[WK_KAKARI_INFORMATION] (
       [KAKARI_CODE] [varchar](4)
@@ -836,8 +860,17 @@ create table [dbo].[WK_KAKARI_INFORMATION] (
     , [KAKARI_NUMBER] [varchar](2)
     , [KAKARI_DIVISION_CODE] [varchar](1)
     , [NEW_BELONGING_LIMIT_FLAG] [varchar](1)
+    , CONSTRAINT [PK__WK_KAKARI_INFORMATION] primary key CLUSTERED
+    (
+       [KAKARI_CODE] asc
+    ) WITH (
+       PAD_INDEX = OFF
+     , STATISTICS_NORECOMPUTE = OFF
+     , IGNORE_DUP_KEY = OFF
+     , ALLOW_ROW_LOCKS = ON
+     , ALLOW_PAGE_LOCKS = ON
+    ) ON [PRIMARY]
 ) ON [PRIMARY]
-
 GO
 
 SET ANSI_PADDING OFF
@@ -968,13 +1001,21 @@ GO
 if object_id('[dbo].[WK_STAFF_DIVISION]') is not null
 DROP TABLE [dbo].[WK_STAFF_DIVISION]
 GO
-
 /*** WK_STAFF_DIVISION テーブル作成 ***/
 create table [dbo].[WK_STAFF_DIVISION] (
       [STAFF_DIVISION_CODE] [varchar](1)
     , [STAFF_DIVISION_NAME] [varchar](40)
+    , CONSTRAINT [PK__WK_STAFF_DIVISION] primary key CLUSTERED
+    (
+       [STAFF_DIVISION_CODE] asc
+    ) WITH (
+       PAD_INDEX = OFF
+     , STATISTICS_NORECOMPUTE = OFF
+     , IGNORE_DUP_KEY = OFF
+     , ALLOW_ROW_LOCKS = ON
+     , ALLOW_PAGE_LOCKS = ON
+    ) ON [PRIMARY]
 ) ON [PRIMARY]
-
 GO
 
 SET ANSI_PADDING OFF
@@ -1007,7 +1048,6 @@ GO
 if object_id('[dbo].[WK_ABOUT_WORK]') is not null
 DROP TABLE [dbo].[WK_ABOUT_WORK]
 GO
-
 /*** WK_ABOUT_WORK テーブル作成 ***/
 create table [dbo].[WK_ABOUT_WORK] (
       [ABOUT_WORK_CODE] [varchar](3)
@@ -1015,8 +1055,17 @@ create table [dbo].[WK_ABOUT_WORK] (
     , [INFORMAL_ABOUT_WORK_NAME] [varchar](12)
     , [MANESUTA_DIVISION_CODE] [varchar](1)
     , [ENGLISH_NAME] [varchar](60)
+    , CONSTRAINT [PK__WK_ABOUT_WORK] primary key CLUSTERED
+    (
+       [ABOUT_WORK_CODE] asc
+    ) WITH (
+       PAD_INDEX = OFF
+     , STATISTICS_NORECOMPUTE = OFF
+     , IGNORE_DUP_KEY = OFF
+     , ALLOW_ROW_LOCKS = ON
+     , ALLOW_PAGE_LOCKS = ON
+    ) ON [PRIMARY]
 ) ON [PRIMARY]
-
 GO
 
 SET ANSI_PADDING OFF
@@ -1070,13 +1119,21 @@ GO
 if object_id('[dbo].[WK_JOB_CATEGORY]') is not null
 DROP TABLE [dbo].[WK_JOB_CATEGORY]
 GO
-
 /*** WK_JOB_CATEGORY テーブル作成 ***/
 create table [dbo].[WK_JOB_CATEGORY] (
       [JOB_CATEGORY_CODE] [varchar](2)
     , [JOB_CATEGORY_NAME] [varchar](20)
+    , CONSTRAINT [PK__WK_JOB_CATEGORY] primary key CLUSTERED
+    (
+       [JOB_CATEGORY_CODE] asc
+    ) WITH (
+       PAD_INDEX = OFF
+     , STATISTICS_NORECOMPUTE = OFF
+     , IGNORE_DUP_KEY = OFF
+     , ALLOW_ROW_LOCKS = ON
+     , ALLOW_PAGE_LOCKS = ON
+    ) ON [PRIMARY]
 ) ON [PRIMARY]
-
 GO
 
 SET ANSI_PADDING OFF

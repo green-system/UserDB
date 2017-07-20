@@ -4,8 +4,13 @@ On Error Resume Next
 ' ユーザDB（東京地区システム用）CSV取込スクリプト
 ' 作成者:K.Tanaka
 ' 変更日付   Rev   変更履歴内容----------------------------->
-' 2017/06/30(1.0.0)新規作成
-' 2017/06/30(1.0.1)DDL実行FATALリトライ待ち時間、メール送信情報、スクリプト終了コード追加
+' 2017/06/30(0.1.0)新規作成
+' 2017/06/30(0.2.0)DDL実行FATALリトライ待ち時間、メール送信情報、スクリプト終了コード追加
+' 2017/06/30(0.2.1)桁あふれのためCInt→CLngに変更
+' 2017/07/10(0.3.0)取込済みCSVファイルバックアップ処理追加
+' 2017/07/12(0.4.0)デフォルトメールアドレスのみの設定でも可能にするための修正
+' 2017/07/18(0.5.0)再帰的にログフォルダが作成できるように修正
+' 2017/07/20(0.6.0)Sub MainにOn Error Resume Next追加
 ' ***********************************************************
 
 ' テスト用フラグ（テスト実施時に"1"にするとDB接続を伴う処理中にスクリプト実行を一時停止することができる。
@@ -13,7 +18,7 @@ On Error Resume Next
 Const PRUEBA_DE_UNIDAD = 0
 
 ' INIファイル名フルパス
-Const INI_NOMBRE_DEL_ARCHIVO = "C:\Work\TOYOTA\DB取込\base_de_datos_importar.ini"
+Const INI_NOMBRE_DEL_ARCHIVO = "D:\ImportCSV\base_de_datos_importar.ini"
 ' ログファイル名
 Const NOMBRE_DEL_REGISTRO = "insert_csv_"
 ' ログレベル
@@ -28,7 +33,7 @@ Const NUM_REVER = 3
 ' DB接続FATALリトライ待ち時間
 Const TIEMPO_DE_ESPERA = 3000
 ' ワークテーブル内データ数カウントバッチ名フルパス
-Const BAT_TABLA_DE_CONTEO = "C:\Work\TOYOTA\DB取込\CSV取込\count_tbl.bat"
+Const BAT_TABLA_DE_CONTEO = "D:\ImportCSV\CSV取込\count_tbl.bat"
 ' ワークテーブル作成SQLファイル名
 Const SQL_CREAR_TABLA = "crear_tabla_temporal.sql"
 ' テーブルリネーム・削除SQLファイル名
@@ -43,11 +48,17 @@ Const SQL_REB_BOR_TABLA = "reb_bor_tabla.sql"
 ' サービス開始停止待ち時間
 'Const TIEMPO_DE_ESPERA = 5000
 ' ---------------------------------------------------------------------------------------------------------------
+Const NOM_BASE_DE_DATOS = "D:\Program Files\Microsoft SQL Server\MSSQL13.MSSQLSERVER\MSSQL\DATA\JINJI.mdf"
+Const NOM_TRANSACCION_REGISTRO = "D:\Program Files\Microsoft SQL Server\MSSQL13.MSSQLSERVER\MSSQL\DATA\JINJI_log.ldf"
 
 ' メール送信情報
-Const ENVIAR_CORREO_NOMBRE_DEL_SERVIDOR = "schedule.jys.pref.chiba.lg.jp"		'送信メールサーバ(SMTP)名
+Const ENVIAR_CORREO_NOMBRE_DEL_SERVIDOR = "mail.toyota.co.jp"					'送信メールサーバ(SMTP)名
 Const PUERTO_NUM = 25															'ポート番号
-Const DEFAULT_MAIL_ADDRESS = "admin <admin@mail.toyota.co.jp>"					'デフォルトメールアドレス
+Const DEFAULT_MAIL_ADDRESS = "東京地区　システム開発支援窓口 <xb-si@mail.toyota.co.jp>"			'デフォルトメールアドレス
+Const FROM_MAIL_ADDRESS = "東京地区　システム開発支援窓口 <xb-si@mail.toyota.co.jp>"			'差出人メールアドレス
+' 取込済みCSVファイルバックアップ
+Const CARPETA_DE_CSV_RESERVA = "backup"								'取込済みCSVファイルバックアップ先フォルダ
+Const LA_VIDA_UTIL = 7												'取込済みCSVファイルバックアップ保存日数
 
 ' 変数定義
 Dim objFso						'FileSystemObject
@@ -73,11 +84,23 @@ Dim entDigitos					'項目最大桁数
 Dim entElementos				'項目数
 Dim cueProceso					'処理名
 Dim cueError					'エラーコード
+Dim path						'再帰的ログフォルダ作成用パス
+Dim arrEachFolderName			'再帰的ログフォルダ作成用フォルダ名
+Dim FolderName					'再帰的ログフォルダ作成ループ用変数
 
 'Dim fcnTODirecciones			'宛先メールアドレス（TO）の配列
 'Dim fcnCCDirecciones			'CCメールアドレス（CC）の配列
 Dim e, entLazo, entLazo2		'ループ用変数
 Dim resultado					'リターンコード
+
+Dim objFile						'ファイルサイズ取得用ファイルオブジェクト
+Dim DBFileSize					'データベースファイルサイス
+Dim TLFileSize					'トランザクションファイルサイズ
+
+Dim cueOrigenCopia				'コピー元ファイル名
+Dim cueDestinoCopia				'コピー先ファイル名
+
+Dim cueNombreDelArchivo			'削除ファイル名
 
 Dim fcnTablaDeConteo			'ワークテーブル名配列
 fcnTablaDeConteo = Array("WK_PERSON_OF_COMPANY", "WK_PERSON_OF_OTHER_COMPANY", "WK_BU_INFORMATION", "WK_SHITSU_INFORMATION", "WK_KAKARI_INFORMATION", "WK_STAFF_DIVISION", "WK_ABOUT_WORK", "WK_JOB_CATEGORY", "WK_QUALIFICATION")
@@ -110,7 +133,7 @@ cueNivelRegistro = GetProfileString( INI_NOMBRE_DEL_ARCHIVO, "log", "loglevel" )
 cueRegistroArchivoCamino = GetProfileString( INI_NOMBRE_DEL_ARCHIVO, "log", "log_file_path" )
 cueCsvArchivoCamino = GetProfileString( INI_NOMBRE_DEL_ARCHIVO, "csv_file", "csv_file_path" )
 cueCsvNombreDelArchivo = GetProfileString( INI_NOMBRE_DEL_ARCHIVO, "csv_file", "csv_filename" )
-entCsvComprobarFilaNum = CInt(GetProfileString( INI_NOMBRE_DEL_ARCHIVO, "csv_file", "csv_check_row_num" ))
+entCsvComprobarFilaNum = CLng(GetProfileString( INI_NOMBRE_DEL_ARCHIVO, "csv_file", "csv_check_row_num" ))
 If Err.Number <> 0 Then		'エラーになった場合の処理
 	' ログ出力用変数設定
 	blnError = True
@@ -130,13 +153,44 @@ cueEjecDDLNombreDelArchivo = GetProfileString( INI_NOMBRE_DEL_ARCHIVO, "db_impor
 cueImportarGuionNombreDelArchivo = GetProfileString( INI_NOMBRE_DEL_ARCHIVO, "db_import", "import_script_filename" )
 'cueEnviarCorreoNombreDelServidor = GetProfileString( INI_NOMBRE_DEL_ARCHIVO, "mail_send", "sendmail_server_name" )
 'cuePuertoNum = GetProfileString( INI_NOMBRE_DEL_ARCHIVO, "mail_send", "port_num" )
-cueToDireccion = GetProfileString( INI_NOMBRE_DEL_ARCHIVO, "mail_send", "to_address" ) & "," & DEFAULT_MAIL_ADDRESS
+cueToDireccion = GetProfileString( INI_NOMBRE_DEL_ARCHIVO, "mail_send", "to_address" )
 cueCcDireccion = GetProfileString( INI_NOMBRE_DEL_ARCHIVO, "mail_send", "cc_address" )
 'cueTransaccionRegistroCamino = GetProfileString( INI_NOMBRE_DEL_ARCHIVO, "sqlserver", "transaction_log_path" )
 
 ' LOGファイル準備
 cueNombreDelRegistro = cueRegistroArchivoCamino & "\" & NOMBRE_DEL_REGISTRO & _
 						Replace(Replace(Replace(Now(), "/", "-"), ":", "-"), " ", "-") & ".log"
+' LOG出力先フォルダが存在しないときは作成する
+If Not objFso.FolderExists(cueRegistroArchivoCamino) Then
+	arrEachFolderName = Split(cueRegistroArchivoCamino, "\")
+	path = ""
+
+	' 各フォルダ名を順番に作成する 
+	For Each FolderName In arrEachFolderName
+		If path <> "" Then
+			path = path & "\"
+		End If
+
+		path = path & FolderName
+		If Not objFso.FolderExists(path) Then
+			objFso.CreateFolder(path)
+			If Err.Number <> 0 Then		'エラーになった場合の処理
+				' ログ出力用変数設定
+				blnError = True
+				cueProceso = "LOG出力先フォルダ作成"
+				cueError = "001"
+				' この時点ではINIファイルに記載されているログファイル格納パスはわからないためバッチ実行パスにログ出力する
+				cueNombreDelRegistro = objFso.getParentFolderName(WScript.ScriptFullName) & "\" & NOMBRE_DEL_REGISTRO & _
+					Replace(Replace(Replace(Now(), "/", "-"), ":", "-"), " ", "-") & ".log"
+				Call SendErrMail(ENVIAR_CORREO_NOMBRE_DEL_SERVIDOR, PUERTO_NUM, DEFAULT_MAIL_ADDRESS,"" , cueProceso, cueError)
+				Call SysWriter(LL_ERROR,"エラー通知メール送信 処理名=" & cueProceso & " エラーCD=" & cueError & " エラー詳細=" & _
+					 "LOG出力先フォルダ作成失敗",cueNombreDelRegistro)
+				Set objFso = Nothing
+				WScript.Quit CInt(cueError)
+			End If
+		End If
+	Next
+End If
 
 ' ---------------------------------------------------------------------------------------------------------------
 ' 復旧モデルを「単純」にすることでトランザクションログ肥大化の心配をしなくてよくなったためコメントアウト
@@ -159,6 +213,7 @@ WScript.Quit CInt(cueError)
 ' スタート
 ' ***********************************************************
 Sub Main()
+	On Error Resume Next
 
 	Call SysWriter(LL_INFO,"====== CSV Import Report ======",cueNombreDelRegistro)
 
@@ -197,7 +252,7 @@ Sub Main()
 			' CSVファイル更新日フォーマット確認
 			If IsDate(Mid(cueLinea, 6, 10)) Then
 				fecCSVActualizacion = CDate(Mid(cueLinea, 6, 10))
-				fcnCSVNumeroEncabezados(entLazo) = CInt(Mid(cueLinea, 23, Len(cueLinea) - 1 - 22))
+				fcnCSVNumeroEncabezados(entLazo) = CLng(Mid(cueLinea, 23, Len(cueLinea) - 1 - 22))
 				' CSVファイル更新日確認
 				If DateDiff("d", fecCSVActualizacion, Now()) = 0 Then
 					Select Case cueNivelRegistro
@@ -529,14 +584,103 @@ Sub Main()
 '	End If
 ' ---------------------------------------------------------------------------------------------------------------
 
+	' 取込済みCSVファイルバックアップ
+	' バックアップ先フォルダが存在しないときは作成する
+	If Not blnError Then
+		cueProceso = "取込済みCSVファイルバックアップ"
+		Call SysWriter(LL_INFO,cueProceso & "開始",cueNombreDelRegistro)
+
+		If Not objFso.FolderExists(cueCsvArchivoCamino & "\" & CARPETA_DE_CSV_RESERVA) Then
+			objFso.CreateFolder(cueCsvArchivoCamino & "\" & CARPETA_DE_CSV_RESERVA)
+			If Err.Number = 0 Then
+				Select Case cueNivelRegistro
+				Case LL_TRACE,LL_DEBUG,LL_INFO	'トレース情報,デバッグ情報,情報
+					Call SysWriter(cueNivelRegistro,"バックアップ先フォルダ=" & cueCsvArchivoCamino & "\" & CARPETA_DE_CSV_RESERVA & " 作成",cueNombreDelRegistro)
+				Case Else
+					'WARN,ERROR,FATALは正常ログ出さない
+				End Select
+			Else
+				Call SysWriter(LL_ERROR,"バックアップ先フォルダ=" & cueCsvArchivoCamino & "\" & CARPETA_DE_CSV_RESERVA & " 作成失敗",cueNombreDelRegistro)
+				' メール送信用変数設定
+				cueError = "011"
+				blnError = True
+			End If
+		End If
+	End If
+
+	If Not blnError Then
+		' バックアップフォルダ内の8日前以前のファイルの削除
+		For Each e In objFso.GetFolder(cueCsvArchivoCamino & "\" & CARPETA_DE_CSV_RESERVA).Files
+			fecCSVActualizacion = CDate(objFso.GetFile(e.Path).DateLastModified)
+			If DateDiff("d", fecCSVActualizacion, Now()) > LA_VIDA_UTIL Then
+				cueNombreDelArchivo = e.Name
+				e.Delete
+				If Err.Number = 0 Then
+					Select Case cueNivelRegistro
+					Case LL_TRACE	'トレース情報
+						Call SysWriter(LL_TRACE,cueNombreDelArchivo & " 本日日付=" & Date() & " 更新日=" & fecCSVActualizacion & " 削除",cueNombreDelRegistro)
+					Case LL_DEBUG	'デバッグ情報
+						Call SysWriter(LL_DEBUG,cueNombreDelArchivo & " 更新日=" & fecCSVActualizacion & " 削除",cueNombreDelRegistro)
+					Case LL_INFO	'情報
+						Call SysWriter(LL_INFO,cueNombreDelArchivo & " 削除",cueNombreDelRegistro)
+					Case Else
+						'WARN,ERROR,FATALは正常ログ出さない
+					End Select
+				Else
+					Call SysWriter(LL_ERROR,cueNombreDelArchivo & " 更新日=" & fecCSVActualizacion & " 削除失敗",cueNombreDelRegistro)
+					' メール送信用変数設定
+					cueError = "011"
+					blnError = True
+					Exit For
+				End If
+			End If
+		Next
+	End If
+
+	' 当日受信CSVファイルのコピー
+	If Not blnError Then
+		For Each e In fcnCSVArchivos
+			cueOrigenCopia = cueCsvArchivoCamino & "\" & e
+			cueDestinoCopia = cueCsvArchivoCamino & "\" & CARPETA_DE_CSV_RESERVA & "\" & Left(e, 7) & "_" & _
+				Replace(Left(Now(),10), "/", "") & ".csv"
+			' ファイルコピー
+			objFso.CopyFile cueOrigenCopia, cueDestinoCopia, True
+			If Err.Number = 0 Then
+				Select Case cueNivelRegistro
+				Case LL_TRACE,LL_DEBUG	'トレース情報,デバッグ情報
+					Call SysWriter(cueNivelRegistro,cueOrigenCopia & "\" & e & "を" & cueDestinoCopia & "へコピー " & cueProceso & "=OK",cueNombreDelRegistro)
+				Case LL_INFO			'情報
+					Call SysWriter(cueNivelRegistro,e & " ⇒ " & Left(e, 7) & "_" & Replace(Left(Now(),10), "/", "") & _
+						".csv " & cueProceso & "=OK",cueNombreDelRegistro)
+				Case Else
+					'WARN,ERROR,FATALは正常ログ出さない
+				End Select
+			Else
+				Call SysWriter(LL_ERROR,cueOrigenCopia & "\" & e & "から" & cueDestinoCopia & "へコピー失敗 " & cueProceso & "=NG",cueNombreDelRegistro)
+				' メール送信用変数設定
+				cueError = "011"
+				blnError = True
+				Exit For
+			End If
+		Next
+	End If
+
 	' エラーがあった場合メール送信
 	If blnError Then
 		Call SendErrMail(ENVIAR_CORREO_NOMBRE_DEL_SERVIDOR, PUERTO_NUM, cueToDireccion, cueCcDireccion, cueProceso, cueError)
 		Call SysWriter(LL_ERROR,"エラー通知メール送信 処理名=" & cueProceso & " エラーCD=" & cueError,cueNombreDelRegistro)
 	End If
 
+	'トランザクションログファイルサイズ取得
+	Set objFile = objFso.GetFile(NOM_BASE_DE_DATOS)
+	DBFileSize = objFile.Size
+	Set objFile = objFso.GetFile(NOM_TRANSACCION_REGISTRO)
+	TLFileSize = objFile.Size
+	Call SysWriter(LL_INFO,"DataBaseFileSize:" & DBFileSize & "   TransactionLogFileSize:" & TLFileSize,cueNombreDelRegistro)
+
 	Call SysWriter(LL_INFO,"====== CSV Import Report ======",cueNombreDelRegistro)
 
+	Set objFile = Nothing
 	Set objFso = Nothing
 	Set objWShell = Nothing
 
@@ -637,11 +781,11 @@ Function ComprobarFila(strLine, strCheckItem, intRowNum)
 	If aryChkDigits(1) - 1 <= UBound(aryLineData) Then
 		Select Case aryChkDigits(3)
 		Case "EXACT"
-			If MyLen(aryLineData(aryChkDigits(1) - 1)) <> CInt(aryChkDigits(2)) Then
+			If MyLen(aryLineData(aryChkDigits(1) - 1)) <> CLng(aryChkDigits(2)) Then
 				ComprobarFila = aryChkDigits(0) & ".csv " & CStr(intRowNum) & "行目" & aryChkDigits(1) & "番目"
 			End If
 		Case "LESS"
-			If MyLen(aryLineData(aryChkDigits(1) - 1)) > CInt(aryChkDigits(2)) Then
+			If MyLen(aryLineData(aryChkDigits(1) - 1)) > CLng(aryChkDigits(2)) Then
 				ComprobarFila = aryChkDigits(0) & ".csv " & CStr(intRowNum) & "行目" & aryChkDigits(1) & "番目"
 			End If
 		End Select
@@ -730,8 +874,12 @@ Function SendErrMail(strSMTPServer, intSMTPPort, strTo, strCc, strProc, strErr)
 			"ログを確認し、手動で取込処理を行ってください。"
 
 	Set objMessage = CreateObject("CDO.Message")
-	objMessage.From = "admin@mail.toyota.co.jp"
-	objMessage.To = strTo
+	objMessage.From = FROM_MAIL_ADDRESS
+	If strTo = DEFAULT_MAIL_ADDRESS Or strTo = "" Then
+		objMessage.To = DEFAULT_MAIL_ADDRESS
+	Else
+		objMessage.To = strTo & "," & DEFAULT_MAIL_ADDRESS
+	End If
 	objMessage.Cc = strCc
 	objMessage.Subject = strSubject
 	objMessage.TextBody = strBody & vbCrLf & Now
