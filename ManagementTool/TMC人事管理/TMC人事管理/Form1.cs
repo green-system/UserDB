@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Configuration;
+using System.Net;
 using System.Data;
 using System.Data.SqlClient;
 using System.Drawing;
@@ -68,7 +70,7 @@ namespace WindowsFormsApplication1
         const String GET_KANOUKOUMOKU_DATA = @"SELECT RES.RETURN_ITEM_CODE, RES.RETURN_ITEM_NAME FROM RETURN_ITEM RES LEFT JOIN REPLY_PERMISSION PER ON RES.RETURN_ITEM_CODE = PER.RETURN_ITEM_CODE WHERE PER.SYSTEM_CODE = @SYSTEM_CODE AND RES.DELETE_FLAG = '0' ORDER BY RES.RETURN_ITEM_CODE ASC";
         const String INSERT_REPLY_PERMISSION = @"INSERT INTO REPLY_PERMISSION (SYSTEM_CODE, RETURN_ITEM_CODE, DELETE_FLAG) VALUES (@SYSTEM_CODE, @RETURN_ITEM_CODE, '0')";
         const String DELETE_REPLY_PERMISSION = @"DELETE FROM REPLY_PERMISSION WHERE SYSTEM_CODE = @SYSTEM_CODE AND RETURN_ITEM_CODE = @RETURN_ITEM_CODE";
-        const String INSERT_PROGRAM_WORKING_INFO = @"INSERT INTO PROGRAM_WORKING_INFO (SERIAL_NUMBER, WORKING_FLAG, WORKING_HOST_NAME, WORKING_IP_ADDRESS, START_DATE_TIME) VALUES (@SERIAL_NUMBER, '1', @WORKING_HOST_NAME, @WORKING_IP_ADDRESS, FORMAT(GETDATE(),'yyyy/MM/dd hh:mm:ss'))";
+        const String INSERT_PROGRAM_WORKING_INFO = @"INSERT INTO PROGRAM_WORKING_INFO (SERIAL_NUMBER, WORKING_FLAG, WORKING_HOST_NAME, WORKING_IP_ADDRESS, START_DATE_TIME) VALUES (@SERIAL_NUMBER, '0', @WORKING_HOST_NAME, @WORKING_IP_ADDRESS, FORMAT(GETDATE(),'yyyy/MM/dd hh:mm:ss'))";
         const String UPDATE_PROGRAM_WORKING_INFO = @"UPDATE PROGRAM_WORKING_INFO SET WORKING_FLAG='0', END_DATE_TIME=FORMAT(GETDATE(),'yyyy/MM/dd hh:mm:ss') WHERE SERIAL_NUMBER=@SERIAL_NUMBER";
         const String DELETE_SYSTEM_INFORMATION = @"UPDATE SYSTEM_INFORMATION SET DELETE_FLAG='1', DELETE_HOST_NAME=@DELETE_HOST_NAME, DELETE_DATE_TIME=FORMAT(GETDATE(),'yyyy/MM/dd hh:mm:ss') WHERE  SYSTEM_CODE=@SYSTEM_CODE";
         const String INSERT_SYSTEM_INFORMATION = @"INSERT INTO SYSTEM_INFORMATION (SYSTEM_CODE, SYSTEM_NAME, DELETE_FLAG) VALUES (@SYSTEM_CODE, @SYSTEM_NAME, '0')";
@@ -107,6 +109,7 @@ namespace WindowsFormsApplication1
         #region CMD
         const String CMDEXE = "ComSpec";                                                    // cmd.exeのパス
         const String COMMAND = @"/c ipconfig /all | findstr ""IPv4 アドレス*(優先)""";      // コマンド
+        const String COMMAND_TASKLIST = @"/c tasklist /svc";                                // コマンド
         const String IPADDRESS_MUCH = @"[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}";       // IPアドレスの正規表現
         #endregion
 
@@ -130,6 +133,7 @@ namespace WindowsFormsApplication1
         Data ShutokuFuka;       // 取得不可項目
         Data ShutokuKanou;      // 取得可能項目
         String ExecutionMode;   // 登録実行ボタンのモード
+        String CONNECTION_STRING = ConfigurationManager.ConnectionStrings["TMC人事管理.Properties.Settings.JINJIConnectionString"].ConnectionString;
         #endregion
 
         #region コンストラクタ
@@ -147,27 +151,49 @@ namespace WindowsFormsApplication1
         private void Form1_Load(object sender, EventArgs e)
         {
             DataTable Result = GetProgramData();    // PG起動情報取得
+            //複数タスク起動している可能性があるため、改行コードにて分割
+            string[] Results = GetTaskList().Replace("\r\n", "\n").Split('\n');
+            //起動数を管理
+            int iCount = 0;
 
-            // すでに起動しているかチェック
-            for (int i = 0; i < Result.Rows.Count; i++)
+            // プロセス起動数を調べる
+            string ProsessNm = System.Diagnostics.Process.GetCurrentProcess().ProcessName;
+            for (int i = 0; i < Results.Length - 1; i++)
             {
-                if ((bool)Result.Rows[i][WORKING_FLAG])
+                if (Results[i].Length > ProsessNm.Length)
                 {
-                    if (Result.Rows[i][WORKING_HOST_NAME].ToString() == System.Net.Dns.GetHostName().ToString())
+                    if (Results[i].Substring(0, ProsessNm.Length) == ProsessNm)
                     {
-                        SerialNumber = int.Parse(Result.Rows[i][SERIAL_NUMBER].ToString());   // シリアルナンバーを設定
-                    }
-                    else
-                    {
-                        // メッセージボックスを表示する
-                        MessageBox.Show(WORKING_MESSAGE + Result.Rows[i][WORKING_IP_ADDRESS].ToString() + Environment.NewLine + Result.Rows[i][WORKING_HOST_NAME].ToString(), WORKING_CAPTION, MessageBoxButtons.OK, MessageBoxIcon.Exclamation, MessageBoxDefaultButton.Button1);
-
-                        // フォームを閉じる
-                        this.Close();
-
-                        return;
+                        iCount++;
                     }
                 }
+            }
+            
+            // 複数起動されている場合、処理を終了する
+            if (iCount != 1)
+            {
+
+                string hostNm = "";
+                string IPAddress = "";
+                // HOST名が取得できた場合
+                if (Result.Rows[Result.Rows.Count - 1][WORKING_HOST_NAME].ToString() != "")
+                {
+                    hostNm = Result.Rows[Result.Rows.Count - 1][WORKING_HOST_NAME].ToString();
+                }
+
+                // IPAddressが取得できた場合
+                if (Result.Rows[Result.Rows.Count - 1][WORKING_IP_ADDRESS].ToString() != "")
+                {
+                    IPAddress = Result.Rows[Result.Rows.Count - 1][WORKING_IP_ADDRESS].ToString();
+                }
+
+                //メッセージボックスを表示する
+                    MessageBox.Show(WORKING_MESSAGE + IPAddress + Environment.NewLine + hostNm, WORKING_CAPTION, MessageBoxButtons.OK, MessageBoxIcon.Exclamation, MessageBoxDefaultButton.Button1);
+
+                // フォームを閉じる
+                this.Close();
+
+                return;
             }
 
             if (SerialNumber == -1)
@@ -988,7 +1014,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = Constants.CONNECTION_STRING;
+            var connectionString = CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1030,7 +1056,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = Constants.CONNECTION_STRING;
+            var connectionString = CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1072,7 +1098,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = Constants.CONNECTION_STRING;
+            var connectionString = CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1114,7 +1140,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = Constants.CONNECTION_STRING;
+            var connectionString = CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1157,7 +1183,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = Constants.CONNECTION_STRING;
+            var connectionString = CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1198,7 +1224,7 @@ namespace WindowsFormsApplication1
         public void Insert_Reply_Permission()
         {
             // 接続文字列の取得
-            var connectionString = Constants.CONNECTION_STRING;
+            var connectionString = CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1237,7 +1263,7 @@ namespace WindowsFormsApplication1
         public void Delete_Reply_Permission()
         {
             // 接続文字列の取得
-            var connectionString = Constants.CONNECTION_STRING;
+            var connectionString = CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1276,38 +1302,13 @@ namespace WindowsFormsApplication1
         public void Insert_Program_Working_Info()
         {
             // 接続文字列の取得
-            var connectionString = Constants.CONNECTION_STRING;
+            var connectionString = CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
             {
                 try
                 {
-                    // Processオブジェクトを作成
-                    System.Diagnostics.Process p = new System.Diagnostics.Process();
-
-                    // ComSpec(cmd.exe)のパスを取得して、FileNameプロパティに指定
-                    p.StartInfo.FileName = System.Environment.GetEnvironmentVariable(CMDEXE);
-                    // 出力を読み取れるようにする
-                    p.StartInfo.UseShellExecute = false;
-                    p.StartInfo.RedirectStandardOutput = true;
-                    p.StartInfo.RedirectStandardInput = false;
-                    // ウィンドウを表示しないようにする
-                    p.StartInfo.CreateNoWindow = true;
-                    // コマンドラインを指定
-                    p.StartInfo.Arguments = COMMAND;
-
-                    // 起動
-                    p.Start();
-
-                    // 出力を読み取る
-                    string Results = p.StandardOutput.ReadToEnd();
-
-                    // Regexオブジェクトを作成
-                    System.Text.RegularExpressions.Regex r = new System.Text.RegularExpressions.Regex(IPADDRESS_MUCH, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-
-                    // results内で正規表現と一致する対象を1つ検索
-                    System.Text.RegularExpressions.Match IPAddress = r.Match(Results);
 
                     // データベースの接続開始
                     connection.Open();
@@ -1315,8 +1316,8 @@ namespace WindowsFormsApplication1
                     // SQLの準備
                     command.CommandText = INSERT_PROGRAM_WORKING_INFO;
                     command.Parameters.Add(new SqlParameter(ADD_SERIAL_NUMBER, SerialNumber));
-                    command.Parameters.Add(new SqlParameter(ADD_WORKING_HOST_NAME, System.Net.Dns.GetHostName()));
-                    command.Parameters.Add(new SqlParameter(ADD_WORKING_IP_ADDRESS, IPAddress.Value));
+                    command.Parameters.Add(new SqlParameter(ADD_WORKING_HOST_NAME, getTerminalHostName()));
+                    command.Parameters.Add(new SqlParameter(ADD_WORKING_IP_ADDRESS, getTerminalIPAddress()));
 
                     // SQLの実行
                     command.ExecuteNonQuery();
@@ -1344,7 +1345,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = Constants.CONNECTION_STRING;
+            var connectionString = CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1385,7 +1386,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = Constants.CONNECTION_STRING;
+            var connectionString = CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1397,7 +1398,7 @@ namespace WindowsFormsApplication1
 
                     // SQLの設定
                     command.CommandText = DELETE_SYSTEM_INFORMATION;
-                    command.Parameters.Add(new SqlParameter(ADD_DELETE_HOST_NAME, System.Net.Dns.GetHostName()));
+                    command.Parameters.Add(new SqlParameter(ADD_DELETE_HOST_NAME, getTerminalHostName()));
                     command.Parameters.Add(new SqlParameter(ADD_SYSTEM_CODE, Select_System_ID.Text.ToString()));
 
                     // SQLの実行
@@ -1425,7 +1426,7 @@ namespace WindowsFormsApplication1
         public void Insert_System_Info()
         {
             // 接続文字列の取得
-            var connectionString = Constants.CONNECTION_STRING;
+            var connectionString = CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1466,7 +1467,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = Constants.CONNECTION_STRING;
+            var connectionString = CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1508,7 +1509,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = Constants.CONNECTION_STRING;
+            var connectionString = CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1520,7 +1521,7 @@ namespace WindowsFormsApplication1
 
                     // SQLの設定
                     command.CommandText = DELETE_RETURN_ITEM;
-                    command.Parameters.Add(new SqlParameter(ADD_DELETE_HOST_NAME, System.Net.Dns.GetHostName()));
+                    command.Parameters.Add(new SqlParameter(ADD_DELETE_HOST_NAME, getTerminalHostName()));
                     command.Parameters.Add(new SqlParameter(ADD_RETURN_ITEM_CODE, Select_Return_Item_ID.Text.ToString()));
 
                     // SQLの実行
@@ -1548,7 +1549,7 @@ namespace WindowsFormsApplication1
         public void Insert_Return_Item()
         {
             // 接続文字列の取得
-            var connectionString = Constants.CONNECTION_STRING;
+            var connectionString = CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1589,7 +1590,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = Constants.CONNECTION_STRING;
+            var connectionString = CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1631,7 +1632,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = Constants.CONNECTION_STRING;
+            var connectionString = CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1645,13 +1646,13 @@ namespace WindowsFormsApplication1
                     if (mode == SYSTEM_MODE)
                     {
                         command.CommandText = UPDATE_REPLY_PERMISSION_SYSTEM;
-                        command.Parameters.Add(new SqlParameter(ADD_DELETE_HOST_NAME, System.Net.Dns.GetHostName()));
+                        command.Parameters.Add(new SqlParameter(ADD_DELETE_HOST_NAME, getTerminalHostName()));
                         command.Parameters.Add(new SqlParameter(ADD_SYSTEM_CODE, Select_System_ID.Text.ToString()));
                     }
                     else if (mode == RETURN_ITEM_MODE)
                     {
                         command.CommandText = UPDATE_REPLY_PERMISSION_RETURN_ITEM;
-                        command.Parameters.Add(new SqlParameter(ADD_DELETE_HOST_NAME, System.Net.Dns.GetHostName()));
+                        command.Parameters.Add(new SqlParameter(ADD_DELETE_HOST_NAME, getTerminalHostName()));
                         command.Parameters.Add(new SqlParameter(ADD_RETURN_ITEM_CODE, Select_Return_Item_ID.Text.ToString()));
                     }
 
@@ -1682,7 +1683,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = Constants.CONNECTION_STRING;
+            var connectionString = CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1717,13 +1718,52 @@ namespace WindowsFormsApplication1
 
             return table;
         }
+        public string GetTaskList()
+        {
+            string Results = "";
+            try
+            {
+                // Processオブジェクトを作成
+                System.Diagnostics.Process p = new System.Diagnostics.Process();
+
+                // ComSpec(cmd.exe)のパスを取得して、FileNameプロパティに指定
+                p.StartInfo.FileName = System.Environment.GetEnvironmentVariable(CMDEXE);
+                // 出力を読み取れるようにする
+                p.StartInfo.UseShellExecute = false;
+                p.StartInfo.RedirectStandardOutput = true;
+                p.StartInfo.RedirectStandardInput = false;
+                // ウィンドウを表示しないようにする
+                p.StartInfo.CreateNoWindow = true;
+                // コマンドラインを指定
+                p.StartInfo.Arguments = COMMAND_TASKLIST;
+
+                // 起動
+                p.Start();
+
+                // 出力を読み取る
+                Results = p.StandardOutput.ReadToEnd();
+
+            }
+            catch (Exception exception)
+            {
+                // メッセージボックスを表示する
+                MessageBox.Show(exception.Message, ERROR_CAPTION, MessageBoxButtons.OK, MessageBoxIcon.Exclamation, MessageBoxDefaultButton.Button1);
+
+                // フォームを閉じる
+                this.Close();
+            }
+            finally
+            {
+            }
+            return Results;
+        }
         #endregion
 
         #region 比較用の応答許可情報作成
         public void Create_Work_Reply_Permission()
         {
             // 接続文字列の取得
-            var connectionString = Constants.CONNECTION_STRING;
+            var connectionString = CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1762,7 +1802,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = Constants.CONNECTION_STRING;
+            var connectionString = CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1804,7 +1844,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = Constants.CONNECTION_STRING;
+            var connectionString = CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1844,7 +1884,7 @@ namespace WindowsFormsApplication1
         public void Drop_Work_Reply_Permission()
         {
             // 接続文字列の取得
-            var connectionString = Constants.CONNECTION_STRING;
+            var connectionString = CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1881,7 +1921,7 @@ namespace WindowsFormsApplication1
         public void Create_Work_System_Info()
         {
             // 接続文字列の取得
-            var connectionString = Constants.CONNECTION_STRING;
+            var connectionString = CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1920,7 +1960,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = Constants.CONNECTION_STRING;
+            var connectionString = CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -1962,7 +2002,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = Constants.CONNECTION_STRING;
+            var connectionString = CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -2002,7 +2042,7 @@ namespace WindowsFormsApplication1
         public void Drop_Work_System_Info()
         {
             // 接続文字列の取得
-            var connectionString = Constants.CONNECTION_STRING;
+            var connectionString = CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -2039,7 +2079,7 @@ namespace WindowsFormsApplication1
         public void Create_Work_Return_Item()
         {
             // 接続文字列の取得
-            var connectionString = Constants.CONNECTION_STRING;
+            var connectionString = CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -2078,7 +2118,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = Constants.CONNECTION_STRING;
+            var connectionString = CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -2120,7 +2160,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = Constants.CONNECTION_STRING;
+            var connectionString = CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -2160,7 +2200,7 @@ namespace WindowsFormsApplication1
         public void Drop_Work_Return_Item()
         {
             // 接続文字列の取得
-            var connectionString = Constants.CONNECTION_STRING;
+            var connectionString = CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -2199,7 +2239,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = Constants.CONNECTION_STRING;
+            var connectionString = CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -2241,7 +2281,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = Constants.CONNECTION_STRING;
+            var connectionString = CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -2283,7 +2323,7 @@ namespace WindowsFormsApplication1
             var table = new DataTable();
 
             // 接続文字列の取得
-            var connectionString = Constants.CONNECTION_STRING;
+            var connectionString = CONNECTION_STRING;
 
             using (var connection = new SqlConnection(connectionString))
             using (var command = connection.CreateCommand())
@@ -2755,5 +2795,44 @@ namespace WindowsFormsApplication1
         }
         #endregion
         #endregion
+
+        #region 接続ホスト名の取得
+        private string getTerminalHostName()
+        {
+            string hostNm;
+            hostNm = System.Environment.ExpandEnvironmentVariables("%CLIENTNAME%");
+            if (hostNm == "" || hostNm == "%CLIENTNAME%")
+            {
+                return "";
+            }else
+            {
+                return hostNm;
+            }
+        }
+        #endregion
+
+        #region 接続IPAddressの取得
+        private string getTerminalIPAddress()
+        {
+            string hostNm = getTerminalHostName();
+            if (hostNm == "" || hostNm == "%CLIENTNAME%")
+            {
+                return "";
+            }
+
+            try
+            {
+                IPHostEntry ipInfo = Dns.GetHostByName(hostNm);
+                int iCnt = ipInfo.AddressList.Length - 1;
+                return ipInfo.AddressList[iCnt].ToString();
+            }
+            catch
+            {
+                return "";
+            }
+            
+        }
+        #endregion
+
     }
 }
