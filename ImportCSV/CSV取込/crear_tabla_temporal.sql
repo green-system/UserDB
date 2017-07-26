@@ -4,6 +4,9 @@
  変更日付   Rev   変更履歴内容----------------------------->
  2017/06/30(0.1.0)新規作成
  2017/07/11(0.2.0)主キー変更
+ 2017/07/25(0.3.0)WK_PERSON_OF_COMPANY,WK_PERSON_OF_OTHER_COMPANYインデックス追加
+ 2017/07/25(0.3.1)WK_PERSON_OF_OTHER_COMPANY主キー削除
+ 2017/07/26(0.3.2)主キー削除処理追加
 */
 
 USE [JINJI]
@@ -16,6 +19,11 @@ SET QUOTED_IDENTIFIER ON
 GO
 
 SET ANSI_PADDING OFF
+GO
+
+/*** PK__WK_PERSON_OF_COMPANY 主キー削除 ***/
+if object_id('dbo.PK__WK_PERSON_OF_COMPANY') is not null
+ALTER TABLE WK_PERSON_OF_COMPANY DROP CONSTRAINT PK__WK_PERSON_OF_COMPANY;
 GO
 
 /*** WK_PERSON_OF_COMPANY テーブル削除 ***/
@@ -297,10 +305,24 @@ EXEC sys.sp_addextendedproperty  @name=N'MS_Description',@value=N'嘱託パート区分
                                 ,@level2type=N'COLUMN',@level2name=N'NONREGULAR_DIVISION_NAME'
 GO
 
+/*** WK_PERSON_OF_COMPANY インデックス削除 ***/
+IF EXISTS(SELECT * FROM sys.indexes WHERE object_id = object_id('dbo.WK_PERSON_OF_COMPANY') AND NAME ='IDX_WK_PERSON_OF_COMPANY')
+DROP INDEX IDX_WK_PERSON_OF_COMPANY ON dbo.WK_PERSON_OF_COMPANY;
+GO
+/*** WK_PERSON_OF_COMPANY インデックス作成 ***/
+CREATE INDEX IDX_WK_PERSON_OF_COMPANY ON WK_PERSON_OF_COMPANY(STAFF_CODE, ORIGINAL_BELONGING_START_DATE, ORIGINAL_BELONGING_CODE)
+GO
+
+/*** PK__WK_PERSON_OF_OTHER_COMPANY 主キー削除 ***/
+if object_id('dbo.PK__WK_PERSON_OF_OTHER_COMPANY') is not null
+ALTER TABLE WK_PERSON_OF_OTHER_COMPANY DROP CONSTRAINT PK__WK_PERSON_OF_OTHER_COMPANY;
+GO
+
 /*** WK_PERSON_OF_OTHER_COMPANY テーブル削除 ***/
 if object_id('[dbo].[WK_PERSON_OF_OTHER_COMPANY]') is not null
 DROP TABLE [dbo].[WK_PERSON_OF_OTHER_COMPANY]
 GO
+
 /*** WK_PERSON_OF_OTHER_COMPANY テーブル作成 ***/
 create table [dbo].[WK_PERSON_OF_OTHER_COMPANY] (
       [STAFF_CODE] [varchar](7)
@@ -318,17 +340,8 @@ create table [dbo].[WK_PERSON_OF_OTHER_COMPANY] (
     , [BELONGING_COMPANY_CODE] [varchar](5)
     , [BELONGING_COMPANY_NAME] [varchar](60)
     , [CARD_STATUS] [varchar](1)
-    , CONSTRAINT [PK__WK_PERSON_OF_OTHER_COMPANY] primary key CLUSTERED
-    (
-       [STAFF_CODE] asc
-    ) WITH (
-       PAD_INDEX = OFF
-     , STATISTICS_NORECOMPUTE = OFF
-     , IGNORE_DUP_KEY = OFF
-     , ALLOW_ROW_LOCKS = ON
-     , ALLOW_PAGE_LOCKS = ON
-    ) ON [PRIMARY]
 ) ON [PRIMARY]
+
 GO
 
 SET ANSI_PADDING OFF
@@ -448,10 +461,24 @@ EXEC sys.sp_addextendedproperty  @name=N'MS_Description',@value=N'カードステータ
                                 ,@level2type=N'COLUMN',@level2name=N'CARD_STATUS'
 GO
 
+/*** WK_PERSON_OF_OTHER_COMPANY インデックス削除 ***/
+IF EXISTS(SELECT * FROM sys.indexes WHERE object_id = object_id('dbo.WK_PERSON_OF_OTHER_COMPANY') AND NAME ='IDX_WK_PERSON_OF_OTHER_COMPANY')
+DROP INDEX IDX_WK_PERSON_OF_OTHER_COMPANY ON dbo.WK_PERSON_OF_OTHER_COMPANY;
+GO
+/*** WK_PERSON_OF_OTHER_COMPANY インデックス作成 ***/
+CREATE INDEX IDX_WK_PERSON_OF_OTHER_COMPANY ON WK_PERSON_OF_OTHER_COMPANY(STAFF_CODE)
+GO
+
+/*** PK__WK_BU_INFORMATION 主キー削除 ***/
+if object_id('dbo.PK__WK_BU_INFORMATION') is not null
+ALTER TABLE WK_BU_INFORMATION DROP CONSTRAINT PK__WK_BU_INFORMATION;
+GO
+
 /*** WK_BU_INFORMATION テーブル削除 ***/
 if object_id('[dbo].[WK_BU_INFORMATION]') is not null
 DROP TABLE [dbo].[WK_BU_INFORMATION]
 GO
+
 /*** WK_BU_INFORMATION テーブル作成 ***/
 create table [dbo].[WK_BU_INFORMATION] (
       [BU_CODE] [varchar](2)
@@ -687,6 +714,11 @@ EXEC sys.sp_addextendedproperty  @name=N'MS_Description',@value=N'英語名称'
                                 ,@level2type=N'COLUMN',@level2name=N'ENGLISH_NAME'
 GO
 
+/*** PK__WK_SHITSU_INFORMATION 主キー削除 ***/
+if object_id('dbo.PK__WK_SHITSU_INFORMATION') is not null
+ALTER TABLE WK_SHITSU_INFORMATION DROP CONSTRAINT PK__WK_SHITSU_INFORMATION;
+GO
+
 /*** WK_SHITSU_INFORMATION テーブル削除 ***/
 if object_id('[dbo].[WK_SHITSU_INFORMATION]') is not null
 DROP TABLE [dbo].[WK_SHITSU_INFORMATION]
@@ -836,6 +868,11 @@ EXEC sys.sp_addextendedproperty  @name=N'MS_Description',@value=N'英語名称'
                                 ,@level0name=N'dbo'
                                 ,@level1type=N'TABLE' ,@level1name=N'WK_SHITSU_INFORMATION'
                                 ,@level2type=N'COLUMN',@level2name=N'ENGLISH_NAME'
+GO
+
+/*** PK__WK_KAKARI_INFORMATION 主キー削除 ***/
+if object_id('dbo.PK__WK_KAKARI_INFORMATION') is not null
+ALTER TABLE WK_KAKARI_INFORMATION DROP CONSTRAINT PK__WK_KAKARI_INFORMATION;
 GO
 
 /*** WK_KAKARI_INFORMATION テーブル削除 ***/
@@ -997,6 +1034,11 @@ EXEC sys.sp_addextendedproperty  @name=N'MS_Description',@value=N'最新所属限定フ
                                 ,@level2type=N'COLUMN',@level2name=N'NEW_BELONGING_LIMIT_FLAG'
 GO
 
+/*** PK__WK_STAFF_DIVISION 主キー削除 ***/
+if object_id('dbo.PK__WK_STAFF_DIVISION') is not null
+ALTER TABLE WK_STAFF_DIVISION DROP CONSTRAINT PK__WK_STAFF_DIVISION;
+GO
+
 /*** WK_STAFF_DIVISION テーブル削除 ***/
 if object_id('[dbo].[WK_STAFF_DIVISION]') is not null
 DROP TABLE [dbo].[WK_STAFF_DIVISION]
@@ -1042,6 +1084,11 @@ EXEC sys.sp_addextendedproperty  @name=N'MS_Description',@value=N'従業員区分名称
                                 ,@level0name=N'dbo'
                                 ,@level1type=N'TABLE' ,@level1name=N'WK_STAFF_DIVISION'
                                 ,@level2type=N'COLUMN',@level2name=N'STAFF_DIVISION_NAME'
+GO
+
+/*** PK__WK_ABOUT_WORK 主キー削除 ***/
+if object_id('dbo.PK__WK_ABOUT_WORK') is not null
+ALTER TABLE WK_ABOUT_WORK DROP CONSTRAINT PK__WK_ABOUT_WORK;
 GO
 
 /*** WK_ABOUT_WORK テーブル削除 ***/
@@ -1115,10 +1162,16 @@ EXEC sys.sp_addextendedproperty  @name=N'MS_Description',@value=N'英語名称'
                                 ,@level2type=N'COLUMN',@level2name=N'ENGLISH_NAME'
 GO
 
+/*** PK__WK_JOB_CATEGORY 主キー削除 ***/
+if object_id('dbo.PK__WK_JOB_CATEGORY') is not null
+ALTER TABLE WK_JOB_CATEGORY DROP CONSTRAINT PK__WK_JOB_CATEGORY;
+GO
+
 /*** WK_JOB_CATEGORY テーブル削除 ***/
 if object_id('[dbo].[WK_JOB_CATEGORY]') is not null
 DROP TABLE [dbo].[WK_JOB_CATEGORY]
 GO
+
 /*** WK_JOB_CATEGORY テーブル作成 ***/
 create table [dbo].[WK_JOB_CATEGORY] (
       [JOB_CATEGORY_CODE] [varchar](2)
@@ -1160,6 +1213,11 @@ EXEC sys.sp_addextendedproperty  @name=N'MS_Description',@value=N'職種名称'
                                 ,@level0name=N'dbo'
                                 ,@level1type=N'TABLE' ,@level1name=N'WK_JOB_CATEGORY'
                                 ,@level2type=N'COLUMN',@level2name=N'JOB_CATEGORY_NAME'
+GO
+
+/*** PK__WK_QUALIFICATION 主キー削除 ***/
+if object_id('dbo.PK__WK_QUALIFICATION') is not null
+ALTER TABLE WK_QUALIFICATION DROP CONSTRAINT PK__WK_QUALIFICATION;
 GO
 
 /*** WK_QUALIFICATION テーブル削除 ***/

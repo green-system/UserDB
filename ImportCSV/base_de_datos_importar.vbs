@@ -11,6 +11,7 @@ On Error Resume Next
 ' 2017/07/12(0.4.0)デフォルトメールアドレスのみの設定でも可能にするための修正
 ' 2017/07/18(0.5.0)再帰的にログフォルダが作成できるように修正
 ' 2017/07/20(0.6.0)Sub MainにOn Error Resume Next追加
+' 2017/07/26(0.7.0)CSVデータファイルバックアップ処理順序変更
 ' ***********************************************************
 
 ' テスト用フラグ（テスト実施時に"1"にするとDB接続を伴う処理中にスクリプト実行を一時停止することができる。
@@ -239,6 +240,87 @@ Sub Main()
 			Exit For
 		End If
 	Next
+
+	' 取込済みCSVファイルバックアップ
+	' バックアップ先フォルダが存在しないときは作成する
+	If Not blnError Then
+		cueProceso = "取込済みCSVファイルバックアップ"
+		Call SysWriter(LL_INFO,cueProceso & "開始",cueNombreDelRegistro)
+
+		If Not objFso.FolderExists(cueCsvArchivoCamino & "\" & CARPETA_DE_CSV_RESERVA) Then
+			objFso.CreateFolder(cueCsvArchivoCamino & "\" & CARPETA_DE_CSV_RESERVA)
+			If Err.Number = 0 Then
+				Select Case cueNivelRegistro
+				Case LL_TRACE,LL_DEBUG,LL_INFO	'トレース情報,デバッグ情報,情報
+					Call SysWriter(cueNivelRegistro,"バックアップ先フォルダ=" & cueCsvArchivoCamino & "\" & CARPETA_DE_CSV_RESERVA & " 作成",cueNombreDelRegistro)
+				Case Else
+					'WARN,ERROR,FATALは正常ログ出さない
+				End Select
+			Else
+				Call SysWriter(LL_ERROR,"バックアップ先フォルダ=" & cueCsvArchivoCamino & "\" & CARPETA_DE_CSV_RESERVA & " 作成失敗",cueNombreDelRegistro)
+				' メール送信用変数設定
+				cueError = "011"
+				blnError = True
+			End If
+		End If
+	End If
+
+	If Not blnError Then
+		' バックアップフォルダ内の8日前以前のファイルの削除
+		For Each e In objFso.GetFolder(cueCsvArchivoCamino & "\" & CARPETA_DE_CSV_RESERVA).Files
+			fecCSVActualizacion = CDate(objFso.GetFile(e.Path).DateLastModified)
+			If DateDiff("d", fecCSVActualizacion, Now()) > LA_VIDA_UTIL Then
+				cueNombreDelArchivo = e.Name
+				e.Delete
+				If Err.Number = 0 Then
+					Select Case cueNivelRegistro
+					Case LL_TRACE	'トレース情報
+						Call SysWriter(LL_TRACE,cueNombreDelArchivo & " 本日日付=" & Date() & " 更新日=" & fecCSVActualizacion & " 削除",cueNombreDelRegistro)
+					Case LL_DEBUG	'デバッグ情報
+						Call SysWriter(LL_DEBUG,cueNombreDelArchivo & " 更新日=" & fecCSVActualizacion & " 削除",cueNombreDelRegistro)
+					Case LL_INFO	'情報
+						Call SysWriter(LL_INFO,cueNombreDelArchivo & " 削除",cueNombreDelRegistro)
+					Case Else
+						'WARN,ERROR,FATALは正常ログ出さない
+					End Select
+				Else
+					Call SysWriter(LL_ERROR,cueNombreDelArchivo & " 更新日=" & fecCSVActualizacion & " 削除失敗",cueNombreDelRegistro)
+					' メール送信用変数設定
+					cueError = "011"
+					blnError = True
+					Exit For
+				End If
+			End If
+		Next
+	End If
+
+	' 当日受信CSVファイルのコピー
+	If Not blnError Then
+		For Each e In fcnCSVArchivos
+			cueOrigenCopia = cueCsvArchivoCamino & "\" & e
+			cueDestinoCopia = cueCsvArchivoCamino & "\" & CARPETA_DE_CSV_RESERVA & "\" & Left(e, 7) & "_" & _
+				Replace(Left(Now(),10), "/", "") & ".csv"
+			' ファイルコピー
+			objFso.CopyFile cueOrigenCopia, cueDestinoCopia, True
+			If Err.Number = 0 Then
+				Select Case cueNivelRegistro
+				Case LL_TRACE,LL_DEBUG	'トレース情報,デバッグ情報
+					Call SysWriter(cueNivelRegistro,cueOrigenCopia & "\" & e & "を" & cueDestinoCopia & "へコピー " & cueProceso & "=OK",cueNombreDelRegistro)
+				Case LL_INFO			'情報
+					Call SysWriter(cueNivelRegistro,e & " ⇒ " & Left(e, 7) & "_" & Replace(Left(Now(),10), "/", "") & _
+						".csv " & cueProceso & "=OK",cueNombreDelRegistro)
+				Case Else
+					'WARN,ERROR,FATALは正常ログ出さない
+				End Select
+			Else
+				Call SysWriter(LL_ERROR,cueOrigenCopia & "\" & e & "から" & cueDestinoCopia & "へコピー失敗 " & cueProceso & "=NG",cueNombreDelRegistro)
+				' メール送信用変数設定
+				cueError = "011"
+				blnError = True
+				Exit For
+			End If
+		Next
+	End If
 
 	' CSVファイル更新日確認（ついでにデータ件数も取得）
 	If Not blnError Then
@@ -584,86 +666,88 @@ Sub Main()
 '	End If
 ' ---------------------------------------------------------------------------------------------------------------
 
-	' 取込済みCSVファイルバックアップ
-	' バックアップ先フォルダが存在しないときは作成する
-	If Not blnError Then
-		cueProceso = "取込済みCSVファイルバックアップ"
-		Call SysWriter(LL_INFO,cueProceso & "開始",cueNombreDelRegistro)
-
-		If Not objFso.FolderExists(cueCsvArchivoCamino & "\" & CARPETA_DE_CSV_RESERVA) Then
-			objFso.CreateFolder(cueCsvArchivoCamino & "\" & CARPETA_DE_CSV_RESERVA)
-			If Err.Number = 0 Then
-				Select Case cueNivelRegistro
-				Case LL_TRACE,LL_DEBUG,LL_INFO	'トレース情報,デバッグ情報,情報
-					Call SysWriter(cueNivelRegistro,"バックアップ先フォルダ=" & cueCsvArchivoCamino & "\" & CARPETA_DE_CSV_RESERVA & " 作成",cueNombreDelRegistro)
-				Case Else
-					'WARN,ERROR,FATALは正常ログ出さない
-				End Select
-			Else
-				Call SysWriter(LL_ERROR,"バックアップ先フォルダ=" & cueCsvArchivoCamino & "\" & CARPETA_DE_CSV_RESERVA & " 作成失敗",cueNombreDelRegistro)
-				' メール送信用変数設定
-				cueError = "011"
-				blnError = True
-			End If
-		End If
-	End If
-
-	If Not blnError Then
-		' バックアップフォルダ内の8日前以前のファイルの削除
-		For Each e In objFso.GetFolder(cueCsvArchivoCamino & "\" & CARPETA_DE_CSV_RESERVA).Files
-			fecCSVActualizacion = CDate(objFso.GetFile(e.Path).DateLastModified)
-			If DateDiff("d", fecCSVActualizacion, Now()) > LA_VIDA_UTIL Then
-				cueNombreDelArchivo = e.Name
-				e.Delete
-				If Err.Number = 0 Then
-					Select Case cueNivelRegistro
-					Case LL_TRACE	'トレース情報
-						Call SysWriter(LL_TRACE,cueNombreDelArchivo & " 本日日付=" & Date() & " 更新日=" & fecCSVActualizacion & " 削除",cueNombreDelRegistro)
-					Case LL_DEBUG	'デバッグ情報
-						Call SysWriter(LL_DEBUG,cueNombreDelArchivo & " 更新日=" & fecCSVActualizacion & " 削除",cueNombreDelRegistro)
-					Case LL_INFO	'情報
-						Call SysWriter(LL_INFO,cueNombreDelArchivo & " 削除",cueNombreDelRegistro)
-					Case Else
-						'WARN,ERROR,FATALは正常ログ出さない
-					End Select
-				Else
-					Call SysWriter(LL_ERROR,cueNombreDelArchivo & " 更新日=" & fecCSVActualizacion & " 削除失敗",cueNombreDelRegistro)
-					' メール送信用変数設定
-					cueError = "011"
-					blnError = True
-					Exit For
-				End If
-			End If
-		Next
-	End If
-
-	' 当日受信CSVファイルのコピー
-	If Not blnError Then
-		For Each e In fcnCSVArchivos
-			cueOrigenCopia = cueCsvArchivoCamino & "\" & e
-			cueDestinoCopia = cueCsvArchivoCamino & "\" & CARPETA_DE_CSV_RESERVA & "\" & Left(e, 7) & "_" & _
-				Replace(Left(Now(),10), "/", "") & ".csv"
-			' ファイルコピー
-			objFso.CopyFile cueOrigenCopia, cueDestinoCopia, True
-			If Err.Number = 0 Then
-				Select Case cueNivelRegistro
-				Case LL_TRACE,LL_DEBUG	'トレース情報,デバッグ情報
-					Call SysWriter(cueNivelRegistro,cueOrigenCopia & "\" & e & "を" & cueDestinoCopia & "へコピー " & cueProceso & "=OK",cueNombreDelRegistro)
-				Case LL_INFO			'情報
-					Call SysWriter(cueNivelRegistro,e & " ⇒ " & Left(e, 7) & "_" & Replace(Left(Now(),10), "/", "") & _
-						".csv " & cueProceso & "=OK",cueNombreDelRegistro)
-				Case Else
-					'WARN,ERROR,FATALは正常ログ出さない
-				End Select
-			Else
-				Call SysWriter(LL_ERROR,cueOrigenCopia & "\" & e & "から" & cueDestinoCopia & "へコピー失敗 " & cueProceso & "=NG",cueNombreDelRegistro)
-				' メール送信用変数設定
-				cueError = "011"
-				blnError = True
-				Exit For
-			End If
-		Next
-	End If
+' --------- CSVファイル存在確認処理の次に移動 -------------------------------------------------------------------
+'	' 取込済みCSVファイルバックアップ
+'	' バックアップ先フォルダが存在しないときは作成する
+'	If Not blnError Then
+'		cueProceso = "取込済みCSVファイルバックアップ"
+'		Call SysWriter(LL_INFO,cueProceso & "開始",cueNombreDelRegistro)
+'
+'		If Not objFso.FolderExists(cueCsvArchivoCamino & "\" & CARPETA_DE_CSV_RESERVA) Then
+'			objFso.CreateFolder(cueCsvArchivoCamino & "\" & CARPETA_DE_CSV_RESERVA)
+'			If Err.Number = 0 Then
+'				Select Case cueNivelRegistro
+'				Case LL_TRACE,LL_DEBUG,LL_INFO	'トレース情報,デバッグ情報,情報
+'					Call SysWriter(cueNivelRegistro,"バックアップ先フォルダ=" & cueCsvArchivoCamino & "\" & CARPETA_DE_CSV_RESERVA & " 作成",cueNombreDelRegistro)
+'				Case Else
+'					'WARN,ERROR,FATALは正常ログ出さない
+'				End Select
+'			Else
+'				Call SysWriter(LL_ERROR,"バックアップ先フォルダ=" & cueCsvArchivoCamino & "\" & CARPETA_DE_CSV_RESERVA & " 作成失敗",cueNombreDelRegistro)
+'				' メール送信用変数設定
+'				cueError = "011"
+'				blnError = True
+'			End If
+'		End If
+'	End If
+'
+'	If Not blnError Then
+'		' バックアップフォルダ内の8日前以前のファイルの削除
+'		For Each e In objFso.GetFolder(cueCsvArchivoCamino & "\" & CARPETA_DE_CSV_RESERVA).Files
+'			fecCSVActualizacion = CDate(objFso.GetFile(e.Path).DateLastModified)
+'			If DateDiff("d", fecCSVActualizacion, Now()) > LA_VIDA_UTIL Then
+'				cueNombreDelArchivo = e.Name
+'				e.Delete
+'				If Err.Number = 0 Then
+'					Select Case cueNivelRegistro
+'					Case LL_TRACE	'トレース情報
+'						Call SysWriter(LL_TRACE,cueNombreDelArchivo & " 本日日付=" & Date() & " 更新日=" & fecCSVActualizacion & " 削除",cueNombreDelRegistro)
+'					Case LL_DEBUG	'デバッグ情報
+'						Call SysWriter(LL_DEBUG,cueNombreDelArchivo & " 更新日=" & fecCSVActualizacion & " 削除",cueNombreDelRegistro)
+'					Case LL_INFO	'情報
+'						Call SysWriter(LL_INFO,cueNombreDelArchivo & " 削除",cueNombreDelRegistro)
+'					Case Else
+'						'WARN,ERROR,FATALは正常ログ出さない
+'					End Select
+'				Else
+'					Call SysWriter(LL_ERROR,cueNombreDelArchivo & " 更新日=" & fecCSVActualizacion & " 削除失敗",cueNombreDelRegistro)
+'					' メール送信用変数設定
+'					cueError = "011"
+'					blnError = True
+'					Exit For
+'				End If
+'			End If
+'		Next
+'	End If
+'
+'	' 当日受信CSVファイルのコピー
+'	If Not blnError Then
+'		For Each e In fcnCSVArchivos
+'			cueOrigenCopia = cueCsvArchivoCamino & "\" & e
+'			cueDestinoCopia = cueCsvArchivoCamino & "\" & CARPETA_DE_CSV_RESERVA & "\" & Left(e, 7) & "_" & _
+'				Replace(Left(Now(),10), "/", "") & ".csv"
+'			' ファイルコピー
+'			objFso.CopyFile cueOrigenCopia, cueDestinoCopia, True
+'			If Err.Number = 0 Then
+'				Select Case cueNivelRegistro
+'				Case LL_TRACE,LL_DEBUG	'トレース情報,デバッグ情報
+'					Call SysWriter(cueNivelRegistro,cueOrigenCopia & "\" & e & "を" & cueDestinoCopia & "へコピー " & cueProceso & "=OK",cueNombreDelRegistro)
+'				Case LL_INFO			'情報
+'					Call SysWriter(cueNivelRegistro,e & " ⇒ " & Left(e, 7) & "_" & Replace(Left(Now(),10), "/", "") & _
+'						".csv " & cueProceso & "=OK",cueNombreDelRegistro)
+'				Case Else
+'					'WARN,ERROR,FATALは正常ログ出さない
+'				End Select
+'			Else
+'				Call SysWriter(LL_ERROR,cueOrigenCopia & "\" & e & "から" & cueDestinoCopia & "へコピー失敗 " & cueProceso & "=NG",cueNombreDelRegistro)
+'				' メール送信用変数設定
+'				cueError = "011"
+'				blnError = True
+'				Exit For
+'			End If
+'		Next
+'	End If
+' ---------------------------------------------------------------------------------------------------------------
 
 	' エラーがあった場合メール送信
 	If blnError Then
